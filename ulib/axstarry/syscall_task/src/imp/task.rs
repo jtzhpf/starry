@@ -134,6 +134,7 @@ pub fn syscall_exec(
     if curr_process.exec(path, args_vec, envs_vec).is_err() {
         exit_current_task(0);
     }
+    info!("SysCall exec");
     Ok(argc as isize)
 }
 
@@ -154,6 +155,8 @@ pub fn syscall_clone(
     let curr_process = current_process();
     #[cfg(feature = "signal")]
     let sig_child = SignalNo::from(flags as usize & 0x3f) == SignalNo::SIGCHLD;
+
+    info!("syscall_clone");
 
     if let Ok(new_task_id) = curr_process.clone_task(
         clone_flags,

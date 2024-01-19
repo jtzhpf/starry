@@ -29,16 +29,27 @@ fn handle_breakpoint(era: &mut usize) {
     *era += 4;
 }
 
+fn dbg_break_point() {
+    // info!("dbg_break_point");
+}
+
 #[no_mangle]
 fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
     let estat = estat::read();
-    let DEBUG:bool = false;
-    if (estat.ecode() != 0) && (estat.ecode() != 0xb) && DEBUG {
-        info!("Trap era : 0x{:x}",tf.era);
-        info!("Trap badv: 0x{:x}",tf.badv);
-        info!("Trap sp  : 0x{:x}",tf.regs[3]);
-        info!("Trap ra  : 0x{:x}",tf.regs[1]);
+    let _code = estat.ecode();
+    // if (estat.ecode() != 0) && (estat.ecode() == 0xb) {
+    if (estat.ecode() != 0) {
+        info!("Trap era : 0x{:x}", tf.era);
+        info!("Trap badv: 0x{:x}", tf.badv);
+        info!("Trap sp  : 0x{:x}", tf.regs[3]);
+        info!("Trap ra  : 0x{:x}", tf.regs[1]);
+        info!("Trap tp  : 0x{:x}", tf.regs[2]);
+        info!("Trap code: {:?}", estat.cause());
     }
+
+    // if from_user {
+    //     warn!("Trap tp  : 0x{:x}", tf.regs[2]);
+    // }
     
     match estat.cause() {
         Trap::Exception(Exception::Breakpoint) => handle_breakpoint(&mut tf.era),
@@ -53,14 +64,35 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
             // jump to next instruction anyway
             tf.era += 4;
             // get system call return value
-            info!("Syscall num:{}", tf.regs[11]);
+            let syscall_num = tf.regs[11];
+            info!("Syscall num: {}", syscall_num);
+            // info!("Syscall tp : 0x{:x}", tf.regs[2]);
+            // info!("Syscall a5 : 0x{:x}", tf.regs[5]);
+            if syscall_num == 139 {
+                info!("----Syscall excpt: 0x{:x}----", tf.era);
+                info!("TrapFrame Addr: {:p}", &tf);
+            }
+
+            if syscall_num == 260 {
+                info!("Wait options: 0x{:x}", tf.regs[6]);
+            }
+
             let result = handle_syscall(
                 tf.regs[11],
                 [
                     tf.regs[4], tf.regs[5], tf.regs[6], tf.regs[7], tf.regs[8], tf.regs[9],
                 ],
             );
+
             info!("Syscall Exit");
+            if syscall_num == 139 {
+                dbg_break_point();
+            }
+
+            if syscall_num == 139 {
+                info!("----Syscall return: 0x{:x}----", tf.era);
+            }
+
             // cx is changed during sys_exec, so we have to call it again
             tf.regs[4] = result as usize;
         }
@@ -75,7 +107,8 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
                     tf.era
                 );
             }
-            handle_page_fault(addr.into(), MappingFlags::USER | MappingFlags::EXECUTE, tf);
+            let flags = MappingFlags::USER | MappingFlags::EXECUTE;
+            handle_page_fault(addr.into(), flags, tf);
         }
 
         #[cfg(feature = "monolithic")]
@@ -85,7 +118,8 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
                 error!("LoadPageFault from kernel, addr: {:#x}", addr);
                 unimplemented!("LoadPageFault fault from kernel");
             }
-            handle_page_fault(addr.into(), MappingFlags::USER | MappingFlags::READ, tf);
+            let flags = if from_user { MappingFlags::USER | MappingFlags::READ } else { MappingFlags::READ };
+            handle_page_fault(addr.into(), flags, tf);
         }
 
         #[cfg(feature = "monolithic")]
@@ -99,14 +133,16 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
                 unimplemented!("StorePageFault from kernel");
             }
             let addr = tf.badv;
-            handle_page_fault(addr.into(), MappingFlags::USER | MappingFlags::WRITE, tf);
+            let flags = MappingFlags::USER | MappingFlags::WRITE;
+            handle_page_fault(addr.into(), flags, tf);
         }
 
 
         #[cfg(feature = "monolithic")]
         Trap::Exception(Exception::PageModifyFault) => {
             let addr = tf.badv;
-            handle_page_fault(addr.into(), MappingFlags::USER | MappingFlags::WRITE | MappingFlags::DIRTY, tf);
+            let flags = MappingFlags::USER | MappingFlags::WRITE | MappingFlags::DIRTY;
+            handle_page_fault(addr.into(), flags, tf);
         }
 
         #[cfg(feature = "monolithic")]
@@ -120,7 +156,10 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
                 );
                 unimplemented!("PagePrivilegeIllegal from kernel");
             };
-            handle_page_fault(addr.into(), MappingFlags::USER, tf);
+            
+            let flags = MappingFlags::USER;
+
+            handle_page_fault(addr.into(), flags, tf);
         }
 
         #[cfg(feature = "monolithic")]

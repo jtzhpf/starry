@@ -372,6 +372,9 @@ impl MemorySet {
             None => MapArea::new_lazy(vaddr, num_pages, flags, backend, &mut self.page_table),
         };
 
+        //let entry = MapArea::get_page_entry(vaddr, &mut self.page_table).unwrap();
+        //warn!("Vaddr :0x{:x} -> Paddr :0x{:x}", vaddr.as_usize(), entry);
+        //warn!("-------------------------------------------------------");
         debug!(
             "allocating [0x{:x}, 0x{:x}) to [0x{:x}, 0x{:x}) flag: {:?}",
             usize::from(vaddr),
@@ -481,6 +484,7 @@ impl MemorySet {
         let mut find_overlap: bool = false;
 
         info!("Map Addr: 0x{:x?}", mmap_addr);
+        info!("Map Segments: {:x?}", segments);
 
         for (start, end) in segments {
             if mmap_addr <= end {
@@ -536,16 +540,16 @@ impl MemorySet {
             unsafe { riscv::asm::sfence_vma_all() };
 
             #[cfg(target_arch = "loongarch64")]
-            unsafe { core::arch::asm!("dbar 0"); };
+            unsafe { core::arch::asm!("dbar 0; invtlb 0x00, $r0, $r0"); };
 
             start.as_usize() as isize
         } else {
             info!("find free area");
             let start = self.find_free_area(start, size);
-
+            debug!("mmap find_free_area: 0x{:x}", start.as_ref().unwrap().as_usize());
             match start {
                 Some(start) => {
-                    info!("found area [{:?}, {:?})", start, start + size);
+                    info!("found area [{:?}, {:?}), flags:{:?}", start, start + size, flags);
                     self.new_region(start, size, flags, None, backend);
 
                     start.as_usize() as isize
@@ -656,7 +660,7 @@ impl MemorySet {
             riscv::asm::sfence_vma_all();
 
             #[cfg(target_arch = "loongarch64")]
-            core::arch::asm!("dbar 0");
+            core::arch::asm!("dbar 0; invtlb 0x00, $r0, $r0");
         }
     }
 
@@ -788,7 +792,9 @@ impl MemorySet {
             let entry = entry.unwrap().0;
             if !entry.is_present() {
                 // 若未分配物理页面，则手动为其分配一个页面，写入到对应页表中
-                area.handle_page_fault(addr, entry.flags(), &mut self.page_table);
+                // the following code error when mmap syscall in loongarch platform
+                // area.handle_page_fault(addr, entry.flags(), &mut self.page_table);
+                area.handle_page_fault(addr, area.flags, &mut self.page_table);
             }
             Ok(())
         } else {

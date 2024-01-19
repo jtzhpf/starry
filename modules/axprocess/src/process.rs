@@ -9,7 +9,7 @@ use axfs::api::{FileIO, OpenFlags};
 use axhal::arch::{write_page_table_root, TrapFrame};
 use axhal::mem::{phys_to_virt, VirtAddr};
 use axhal::KERNEL_PROCESS_ID;
-use axlog::{debug, error};
+use axlog::{debug, error, info, warn};
 use axmem::MemorySet;
 use axsync::Mutex;
 use axtask::{current, AxTaskRef, TaskId, TaskInner, RUN_QUEUE};
@@ -148,16 +148,15 @@ impl Process {
     }
     /// 根据给定参数创建一个新的进程，作为应用程序初始进程
     pub fn init(args: Vec<String>) -> AxResult<AxTaskRef> {
-        use axlog::info;
         let path = args[0].clone();
         let mut memory_set = MemorySet::new_with_kernel_mapped();
         let page_table_token = memory_set.page_table_token();
         if page_table_token != 0 {
-            unsafe {
+            {
                 write_page_table_root(page_table_token.into());
                 let task = current();
                 info!("Cur Task: {}", task.id_name());
-                info!("page_table_token: {:x}",page_table_token);
+                warn!("0x{:x}",page_table_token);
                 // riscv::register::sstatus::set_sum();
             };
         }
@@ -263,7 +262,7 @@ impl Process {
             riscv::asm::sfence_vma_all();
 
             #[cfg(target_arch = "loongarch64")]
-            core::arch::asm!("dbar 0");
+            core::arch::asm!("dbar 0; invtlb 0x00, $r0, $r0");
         }
 
         // 关闭 `CLOEXEC` 的文件
@@ -298,6 +297,7 @@ impl Process {
                 error!("Failed to load app {}", name);
                 return Err(AxError::NotFound);
             };
+        info!("Elf entry:{:x}", entry);
         // 切换了地址空间， 需要切换token
         let page_table_token = if self.pid == KERNEL_PROCESS_ID {
             0
@@ -313,7 +313,7 @@ impl Process {
                 riscv::asm::sfence_vma_all();
 
                 #[cfg(target_arch = "loongarch64")]
-                core::arch::asm!("dbar 0");
+                core::arch::asm!("dbar 0; invtlb 0x00, $r0, $r0");
             };
             // 清空用户堆，重置堆顶
         }
@@ -339,6 +339,8 @@ impl Process {
         // user_stack_top = user_stack_top / PAGE_SIZE_4K * PAGE_SIZE_4K;
         let new_trap_frame =
             TrapFrame::app_init_context(entry.as_usize(), user_stack_bottom.as_usize());
+        info!("new_trap_frame: {:p}", &new_trap_frame);
+        info!("sp: 0x{:x}", user_stack_bottom.as_usize());
         current_task.set_trap_context(new_trap_frame);
         current_task.set_trap_in_kernel_stack();
         Ok(())
@@ -541,14 +543,17 @@ impl Process {
         // 新开的进程/线程返回值为0
         trap_frame.regs[4] = 0; // r4 = a0
         if flags.contains(CloneFlags::CLONE_SETTLS) {
+            info!("Original tp: 0x{:x}", trap_frame.regs[2]);
             trap_frame.regs[2] = tls; // r2 = tp
+            info!("NewClone tp: 0x{:x}", trap_frame.regs[2]);
         }
+        info!("NewClone tp: 0x{:x}", trap_frame.regs[2]);
         // 设置用户栈
         // 若给定了用户栈，则使用给定的用户栈
         // 若没有给定用户栈，则使用当前用户栈
         // 没有给定用户栈的时候，只能是共享了地址空间，且原先调用clone的有用户栈，此时已经在之前的trap clone时复制了
         if let Some(stack) = stack {
-            trap_frame.regs[3] = stack; // r3 = tp
+            trap_frame.regs[3] = stack; // r3 = sp
             // info!(
             //     "New user stack: sepc:{:X}, stack:{:X}",
             //     trap_frame.sepc, trap_frame.regs.sp

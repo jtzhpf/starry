@@ -3,7 +3,7 @@ extern crate alloc;
 use alloc::sync::Arc;
 use axerrno::{AxError, AxResult};
 use axhal::{arch::TrapFrame, cpu::this_cpu_id, KERNEL_PROCESS_ID};
-use axlog::{info, warn};
+use axlog::{info, warn, trace};
 use axsignal::{
     action::{SigActionFlags, SignalDefault, SIG_IGN},
     info::SigInfo,
@@ -98,6 +98,10 @@ fn terminate_process(signal: SignalNo) {
     }
 }
 
+pub fn dbg_test() {
+
+}
+
 /// 处理当前进程的信号
 ///
 /// 若返回值为真，代表需要进入处理信号，因此需要执行trap的返回
@@ -125,7 +129,7 @@ pub fn handle_signals() {
     } else {
         return;
     };
-    warn!(
+    trace!(
         "cpu: {}, task: {}, handler signal: {}",
         this_cpu_id(),
         current_task.id().as_u64(),
@@ -198,7 +202,7 @@ pub fn handle_signals() {
     // 新的trap上下文的sp指针位置，由于SIGINFO会存放内容，所以需要开个保护区域
     let mut sp = trap_frame.regs[3] - USER_SIGNAL_PROTECT;
     info!(
-        "restorer :{}, handler: {}",
+        "restorer :0x{:x}, handler: 0x{:x}",
         action.get_storer(),
         action.sa_handler
     );
@@ -231,8 +235,10 @@ pub fn handle_signals() {
         trap_frame.regs[6] = sp;
     }
     trap_frame.regs[3] = sp;
+    info!("Trap_frame: 0x{:x}", trap_frame.regs[3]);
     drop(signal_handler);
     drop(signal_modules);
+    dbg_test();
 }
 
 /// 从信号处理函数返回

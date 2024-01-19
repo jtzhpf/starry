@@ -123,10 +123,11 @@ else ifeq ($(ARCH), aarch64)
 else ifeq ($(ARCH), loongarch64)
   LOG := debug
   LOG := info
-#   LOG := warn
+#   LOG := trace
+  LOG := warn
   ACCEL ?= n
   SMP := 1
-  TARGET := loongarch64-unknown-none-softfloat
+  TARGET := loongarch64-unknown-none
   PLATFORM_NAME ?= loongarch64-qemu-virt
 #   PLATFORM_NAME := loongarch64-2k1000
 #   FEATURES := fs
@@ -199,8 +200,9 @@ justrun:
 	$(call run_qemu)
 
 debug: build
-	$(call run_qemu_debug) &
-	sleep 1
+	$(call run_qemu_debug)
+	
+gdb:
 	$(GDB) $(OUT_ELF) \
 	  -ex 'target remote localhost:1234' \
 	  -ex 'b rust_entry' \
