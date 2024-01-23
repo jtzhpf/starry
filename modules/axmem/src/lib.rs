@@ -47,7 +47,7 @@ pub(crate) const AT_RANDOM: u8 = 25;
 static SHMID: AtomicI32 = AtomicI32::new(1);
 
 /// This struct only hold SharedMem that are not IPC_PRIVATE. IPC_PRIVATE SharedMem will be stored
-/// in MemorySet::detached_mem.
+/// in MemorySet::attached_mem.
 ///
 /// This is the only place we can query a SharedMem using its shmid.
 ///

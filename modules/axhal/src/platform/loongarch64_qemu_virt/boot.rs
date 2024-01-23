@@ -24,7 +24,7 @@ unsafe extern "C" fn _start() -> ! {
         csrwr       $t0, 0x181          # LOONGARCH_CSR_DMWIN1
 
         # Enable PG 
-        li.w		$t0, 0xb0		# PLV=0, IE=0, PG=1
+        li.w		$t0, 0xb0		# PLV=0, IE=0, DA=0, PG=1
         csrwr		$t0, 0x0        # LOONGARCH_CSR_CRMD
         li.w		$t0, 0x00		# PLV=0, PIE=0, PWE=0
         csrwr		$t0, 0x1        # LOONGARCH_CSR_PRMD

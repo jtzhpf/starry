@@ -19,7 +19,7 @@ pub struct TrapFrame {
     pub ktp:  usize,
     /// Kernel r21 register
     pub kr21: usize,
-    /// Fp register
+    // Fp register
     pub fs: [usize; 2],
 }
 

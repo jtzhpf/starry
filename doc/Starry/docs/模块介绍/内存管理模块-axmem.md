@@ -7,7 +7,7 @@ MemorySet 代表一个进程所拥有（或多个线程共有）的地址空间�
 
 地址空间中最为核心的数据结构是页表（page_table）。使用RAII思想，页表（PageTable 类型）拥有页表本身使用的物理页。
 
-除页表外，owned_mem 记录了在通过 mmap 以及应用程序加载时所获得的全部虚拟内存段。private_mem 和 sttached_mem 分别记录了进程所拥有的 System V Shared Memory。
+除页表外，owned_mem 记录了在通过 mmap 以及应用程序加载时所获得的全部虚拟内存段。private_mem 和 attached_mem 分别记录了进程所拥有的 System V Shared Memory。
 
 以及，MemorySet 会记录加载自 ELF 文件的 entry 地址。
 
@@ -49,7 +49,7 @@ pub static SHARED_MEMS: SpinNoIrq<BTreeMap<i32, Arc<SharedMem>>> = SpinNoIrq::ne
 pub static KEY_TO_SHMID: SpinNoIrq<BTreeMap<i32, i32>> = SpinNoIrq::new(BTreeMap::new());
 ```
 
-当进程“挂载（映射）”某一共享内存段时，SharedMem 也会被加入 MemorySet::sttached_mem 中，便于执行进程的其他操作时访问。使用 Arc 数据结构可以得到“一段共享内存被多少个进程加载了”的信息，以便及时回收内存。
+当进程“挂载（映射）”某一共享内存段时，SharedMem 也会被加入 MemorySet::attached_mem 中，便于执行进程的其他操作时访问。使用 Arc 数据结构可以得到“一段共享内存被多少个进程加载了”的信息，以便及时回收内存。
 
 ### MapArea
 

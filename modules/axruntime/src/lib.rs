@@ -144,7 +144,7 @@ pub extern "C" fn rust_main(cpu_id: usize, dtb: usize) -> ! {
     #[cfg(feature = "alloc")]
     init_allocator();
 
-    #[cfg(all(feature = "paging", not(target_arch = "loongarch64")))]
+#[cfg(feature = "paging")]
     {
         info!("Initialize kernel page table...");
         remap_kernel_memory().expect("remap kernel memoy failed");
@@ -234,7 +234,7 @@ fn init_allocator() {
     }
     for r in memory_regions() {
         if r.flags.contains(MemRegionFlags::FREE) && r.paddr == max_region_paddr {
-            info!("alloc region size: {:X}", r.size);
+            info!("alloc region size: {:x?}", r.size);
             axalloc::global_init(phys_to_virt(r.paddr).as_usize(), r.size);
             break;
         }
@@ -253,7 +253,6 @@ cfg_if::cfg_if! {
         use axhal::paging::PageTable;
         use lazy_init::LazyInit;
         pub static KERNEL_PAGE_TABLE: LazyInit<PageTable> = LazyInit::new();
-        #[cfg(all(feature = "paging", not(target_arch = "loongarch64")))]
         fn remap_kernel_memory() -> Result<(), axhal::paging::PagingError> {
             use axhal::mem::{memory_regions, phys_to_virt};
             if axhal::cpu::this_cpu_is_bsp() {
