@@ -76,12 +76,12 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
         }
 
         let entry = self.get_entry_mut_or_create(vaddr, page_size)?;
+        trace!("Page PTE {:x?} {:x?} {:x?}",vaddr,entry.paddr(),entry.flags());
         if !entry.is_unused() {
             return Err(PagingError::AlreadyMapped);
         }
         *entry = GenericPTE::new_page(target.align_down(page_size), flags, page_size.is_huge());
-        trace!("flags:{:?}", flags);
-        trace!("Page PTE: {:x}, f:{:x}, h:{} -> {:x}, {:x}", target.align_down(page_size), flags, page_size.is_huge(), vaddr, target);
+        trace!("Page PTE {:x?}, {:x?}, huge:{:x?} -> {:x?}, {:x?}", target.align_down(page_size), flags, page_size.is_huge(), vaddr, target);
         trace!("PTE:{:x}", entry.context());
         Ok(())
     }
@@ -332,6 +332,7 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
     fn alloc_table() -> PagingResult<PhysAddr> {
         if let Some(paddr) = IF::alloc_frame() {
             let ptr = IF::phys_to_virt(paddr).as_mut_ptr();
+            debug!("allocate table vaddr:{:#x?} -> paddr:{:#x?}",ptr,paddr);
             unsafe { core::ptr::write_bytes(ptr, 0, PAGE_SIZE_4K) };
             Ok(paddr)
         } else {

@@ -144,7 +144,7 @@ pub extern "C" fn rust_main(cpu_id: usize, dtb: usize) -> ! {
     #[cfg(feature = "alloc")]
     init_allocator();
 
-#[cfg(feature = "paging")]
+    #[cfg(feature = "paging")]
     {
         info!("Initialize kernel page table...");
         remap_kernel_memory().expect("remap kernel memoy failed");
@@ -234,7 +234,7 @@ fn init_allocator() {
     }
     for r in memory_regions() {
         if r.flags.contains(MemRegionFlags::FREE) && r.paddr == max_region_paddr {
-            info!("alloc region size: {:x?}", r.size);
+            info!("alloc region size: {:#x?}", r.size);
             axalloc::global_init(phys_to_virt(r.paddr).as_usize(), r.size);
             break;
         }

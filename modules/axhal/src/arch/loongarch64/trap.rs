@@ -39,12 +39,12 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
     let _code = estat.ecode();
     // if (estat.ecode() != 0) && (estat.ecode() == 0xb) {
     if estat.ecode() != 0 {
-        info!("Trap era : 0x{:x}", tf.era);
-        info!("Trap badv: 0x{:x}", tf.badv);
-        info!("Trap sp  : 0x{:x}", tf.regs[3]);
-        info!("Trap ra  : 0x{:x}", tf.regs[1]);
-        info!("Trap tp  : 0x{:x}", tf.regs[2]);
-        info!("Trap code: {:?}", estat.cause());
+        debug!("Trap era : 0x{:x}", tf.era);
+        debug!("Trap badv: 0x{:x}", tf.badv);
+        debug!("Trap sp  : 0x{:x}", tf.regs[3]);
+        debug!("Trap ra  : 0x{:x}", tf.regs[1]);
+        debug!("Trap tp  : 0x{:x}", tf.regs[2]);
+        debug!("Trap code: {:?}", estat.cause());
     }
 
     // if from_user {
@@ -70,11 +70,11 @@ fn loongarch64_trap_handler(tf: &mut TrapFrame, from_user: bool) {
             // info!("Syscall a5 : 0x{:x}", tf.regs[5]);
             if syscall_num == 139 {
                 info!("----Syscall excpt: 0x{:x}----", tf.era);
-                info!("TrapFrame Addr: {:p}", &tf);
+                debug!("TrapFrame Addr: {:p}", &tf);
             }
 
             if syscall_num == 260 {
-                info!("Wait options: 0x{:x}", tf.regs[6]);
+                debug!("Wait options: 0x{:x}", tf.regs[6]);
             }
 
             let result = handle_syscall(
