@@ -205,7 +205,7 @@ impl MemorySet {
                     _ => panic!("Invalid data in .dynsym section"),
                 };
 
-                info!("Relocating .rela.dyn");
+                // info!("Relocating .rela.dyn");
                 for entry in data {
                     match entry.get_type() {
                         REL_GOT | REL_PLT | R_RISCV_64 => {
@@ -285,7 +285,7 @@ impl MemorySet {
                 _ => panic!("Invalid data in .dynsym section"),
             };
 
-            info!("Relocating .rela.plt");
+            // info!("Relocating .rela.plt");
             for entry in data {
                 match entry.get_type() {
                     5 => {
@@ -321,7 +321,7 @@ impl MemorySet {
             }
         }
 
-        info!("Relocating done");
+        // info!("Relocating done");
         self.entry = elf.header.pt2.entry_point() as usize + base_addr;
 
         let mut map = BTreeMap::new();
@@ -413,21 +413,23 @@ impl MemorySet {
 
         self.owned_mem = prev_area;
 
-        info!("splitting for [{:?}, {:?})", start, end);
+        // info!("splitting for [{:?}, {:?})", start, end);
 
         // Modify areas and insert it back to BTree.
         for (_, mut area) in overlapped_area {
             if area.contained_in(start, end) {
-                info!("  drop [{:?}, {:?})", area.vaddr, area.end_va());
+                // info!("  drop [{:?}, {:?})", area.vaddr, area.end_va());
                 area.dealloc(&mut self.page_table);
                 // drop area
                 drop(area);
             } else if area.strict_contain(start, end) {
+                /* 
                 info!(
                     "  split [{:?}, {:?}) into 2 areas",
                     area.vaddr,
                     area.end_va()
                 );
+                */
                 let new_area = area.remove_mid(start, end, &mut self.page_table);
 
                 assert!(self
@@ -436,6 +438,7 @@ impl MemorySet {
                     .is_none());
                 assert!(self.owned_mem.insert(area.vaddr.into(), area).is_none());
             } else if start <= area.vaddr && area.vaddr < end {
+                /* 
                 info!(
                     "  shrink_left [{:?}, {:?}) to [{:?}, {:?})",
                     area.vaddr,
@@ -443,10 +446,12 @@ impl MemorySet {
                     end,
                     area.end_va()
                 );
+                */
                 area.shrink_left(end, &mut self.page_table);
 
                 assert!(self.owned_mem.insert(area.vaddr.into(), area).is_none());
             } else {
+                /* 
                 info!(
                     "  shrink_right [{:?}, {:?}) to [{:?}, {:?})",
                     area.vaddr,
@@ -454,6 +459,7 @@ impl MemorySet {
                     area.vaddr,
                     start
                 );
+                */
                 area.shrink_right(start, &mut self.page_table);
 
                 assert!(self.owned_mem.insert(area.vaddr.into(), area).is_none());
@@ -483,8 +489,8 @@ impl MemorySet {
         let mut find_area: bool = false;
         let mut find_overlap: bool = false;
 
-        info!("Map Addr: 0x{:x?}", mmap_addr);
-        info!("Map Segments: {:x?}", segments);
+        // info!("Map Addr: 0x{:x?}", mmap_addr);
+        // info!("Map Segments: {:x?}", segments);
 
         for (start, end) in segments {
             if mmap_addr <= end {
@@ -522,6 +528,7 @@ impl MemorySet {
         // align up to 4k
         let size = (size + PAGE_SIZE_4K - 1) / PAGE_SIZE_4K * PAGE_SIZE_4K;
 
+        /* 
         info!(
             "[mmap] vaddr: [{:?}, {:?}), {:?}, fixed: {}, backend: {}",
             start,
@@ -530,7 +537,7 @@ impl MemorySet {
             fixed,
             backend.is_some()
         );
-
+        */
         let addr = if fixed {
             self.split_for_area(start, size);
 
@@ -544,12 +551,12 @@ impl MemorySet {
 
             start.as_usize() as isize
         } else {
-            info!("find free area");
+            // info!("find free area");
             let start = self.find_free_area(start, size);
             debug!("mmap find_free_area: 0x{:x}", start.as_ref().unwrap().as_usize());
             match start {
                 Some(start) => {
-                    info!("found area [{:?}, {:?}), flags:{:?}", start, start + size, flags);
+                    // info!("found area [{:?}, {:?}), flags:{:?}", start, start + size, flags);
                     self.new_region(start, size, flags, None, backend);
 
                     start.as_usize() as isize
@@ -567,7 +574,7 @@ impl MemorySet {
     pub fn munmap(&mut self, start: VirtAddr, size: usize) {
         // align up to 4k
         let size = (size + PAGE_SIZE_4K - 1) / PAGE_SIZE_4K * PAGE_SIZE_4K;
-        info!("[munmap] [{:?}, {:?})", start, (start + size).align_up_4k());
+        // info!("[munmap] [{:?}, {:?})", start, (start + size).align_up_4k());
 
         self.split_for_area(start, size);
     }
@@ -597,12 +604,14 @@ impl MemorySet {
     /// NOTE: It's possible that this function will break map areas into two for different mapping
     /// flag settings.
     pub fn mprotect(&mut self, start: VirtAddr, size: usize, flags: MappingFlags) {
+        /* 
         info!(
             "[mprotect] addr: [{:?}, {:?}), flags: {:?}",
             start,
             start + size,
             flags
         );
+        */
         let end = start + size;
         assert!(end.is_aligned_4k());
 
@@ -811,7 +820,7 @@ impl MemorySet {
         let end: usize = end.align_down_4k().into();
         for addr in (start..=end).step_by(PAGE_SIZE_4K) {
             // 逐页访问，主打暴力
-            debug!("allocating page at {:x}", addr);
+            debug!("allocating page at {:#x?}", addr);
             self.manual_alloc_for_lazy(addr.into())?;
         }
         Ok(())

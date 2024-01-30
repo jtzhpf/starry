@@ -3,6 +3,7 @@
 //! them.  
 extern crate alloc;
 use alloc::sync::Arc;
+use axlog::{debug, error, info, warn};
 use axhal::{mem::VirtAddr, time::current_ticks};
 use axprocess::current_process;
 use syscall_utils::{SyscallError, SyscallResult};
@@ -17,6 +18,7 @@ use crate::ctype::epoll::{EpollCtl, EpollEvent, EpollFile};
 ///
 /// If flag equals to EPOLL_CLOEXEC, than set the cloexec flag for the fd
 pub fn syscall_epoll_create1(_flag: usize) -> SyscallResult {
+    info!("[syscall_epoll_create1()]");
     let file = EpollFile::new();
     let process = current_process();
     let mut fd_table = process.fd_manager.fd_table.lock();

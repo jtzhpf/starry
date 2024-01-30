@@ -76,13 +76,13 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
         }
 
         let entry = self.get_entry_mut_or_create(vaddr, page_size)?;
-        trace!("Page PTE {:x?} {:x?} {:x?}",vaddr,entry.paddr(),entry.flags());
+        // trace!("Page PTE {:x?} {:x?} {:x?}",vaddr,entry.paddr(),entry.flags());
         if !entry.is_unused() {
             return Err(PagingError::AlreadyMapped);
         }
         *entry = GenericPTE::new_page(target.align_down(page_size), flags, page_size.is_huge());
-        trace!("Page PTE {:x?}, {:x?}, huge:{:x?} -> {:x?}, {:x?}", target.align_down(page_size), flags, page_size.is_huge(), vaddr, target);
-        trace!("PTE:{:x}", entry.context());
+        // trace!("Page PTE {:x?}, {:x?}, huge:{:x?} -> {:x?}, {:x?}", target.align_down(page_size), flags, page_size.is_huge(), vaddr, target);
+        // trace!("PTE:{:x}", entry.context());
         Ok(())
     }
     /// Same as `PageTable64::map()`. This function will error if entry doesn't exist. Should be
@@ -188,6 +188,7 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
         {
             return Err(PagingError::NotAligned);
         }
+        /* 
         trace!(
             "map_region({:#x}): [{:#x}, {:#x}) -> [{:#x}, {:#x}) {:?}",
             self.root_paddr(),
@@ -197,6 +198,7 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
             paddr + size,
             flags,
         );
+        */
         let mut vaddr = vaddr;
         let mut paddr = paddr;
         let mut size = size;
@@ -227,7 +229,7 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
             if false && (vaddr.as_usize() == 0x120000000) {
                 let taddr:u64 = paddr.as_usize() as u64 + 0x9000000000000000 + 0xb0;
                 let inst = unsafe{*(taddr as *mut u32 )};
-                trace!("Context: 0x{:x}: 0x{:x}", taddr, inst);
+                // trace!("Context: 0x{:x}: 0x{:x}", taddr, inst);
             }
             vaddr += page_size as usize;
             paddr += page_size as usize;
@@ -243,13 +245,14 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
         {
             return Err(PagingError::NotAligned);
         }
+        /*  
         trace!(
             "map_fulat_region({:#x}): [{:#x}, {:#x})",
             self.root_paddr(),
             vaddr,
             vaddr + size,
         );
-
+        */
         while size > 0 {
             self.map_fault(vaddr, PageSize::Size4K).inspect_err(|e| {
                 error!(
@@ -271,12 +274,13 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
     /// The region must be mapped before using [`PageTable64::map_region`], or
     /// unexpected behaviors may occur.
     pub fn unmap_region(&mut self, vaddr: VirtAddr, size: usize) -> PagingResult {
-        trace!(
+        /* trace!(
             "unmap_region({:#x}) [{:#x}, {:#x})",
             self.root_paddr(),
             vaddr,
             vaddr + size,
         );
+        */
         let mut vaddr = vaddr;
         let mut size = size;
         while size > 0 {
@@ -416,17 +420,17 @@ impl<M: PagingMetaData, PTE: GenericPTE, IF: PagingIf> PageTable64<M, PTE, IF> {
         if page_size == PageSize::Size1G {
             return Ok(p3e);
         }
-        trace!("P3e: {:p}", p3e);
+        // trace!("P3e: {:p}", p3e);
         let p2 = self.next_table_mut_or_create(p3e)?;
         let p2e = &mut p2[p2_index(vaddr)];
         if page_size == PageSize::Size2M {
             return Ok(p2e);
         }
 
-        trace!("P2e: {:p}", p2e);
+        // trace!("P2e: {:p}", p2e);
         let p1 = self.next_table_mut_or_create(p2e)?;
         let p1e = &mut p1[p1_index(vaddr)];
-        trace!("P1e: {:p}", p1e);
+        // trace!("P1e: {:p}", p1e);
         Ok(p1e)
     }
 

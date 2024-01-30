@@ -254,6 +254,7 @@ pub fn syscall_renameat2(
 }
 
 pub fn syscall_fcntl64(fd: usize, cmd: usize, arg: usize) -> SyscallResult {
+    info!("[syscall_fcntl64()] ");
     let process = current_process();
     let mut fd_table = process.fd_manager.fd_table.lock();
 

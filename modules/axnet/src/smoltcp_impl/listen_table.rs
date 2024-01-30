@@ -62,6 +62,7 @@ impl ListenTable {
     }
 
     pub fn listen(&self, listen_endpoint: IpListenEndpoint) -> AxResult {
+        info!("listen_endpoint:{listen_endpoint}");
         let port = listen_endpoint.port;
         assert_ne!(port, 0);
         let mut entry = self.tcp[port as usize].lock();

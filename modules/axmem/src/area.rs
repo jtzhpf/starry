@@ -59,12 +59,14 @@ impl MapArea {
         page_table: &mut PageTable,
     ) -> AxResult<Self> {
         let pages = PhysPage::alloc_contiguous(num_pages, PAGE_SIZE_4K, data)?;
+        /* 
         info!(
             "start: {:X?}, size: {:X},  page start: {:X?}",
             start,
             num_pages * PAGE_SIZE_4K,
             pages[0].as_ref().unwrap().start_vaddr
         );
+        */
         let _ = page_table
             .map_region(
                 start,
@@ -192,8 +194,8 @@ impl MapArea {
 
             #[cfg(target_arch = "loongarch64")]
             {
-                info!("Vaddr :{:?}, Paddr :{:?}", addr, page.start_vaddr);
-                info!("Page Table is Overwritten, flush tlb.");
+               // info!("Vaddr :{:?}, Paddr :{:?}", addr, page.start_vaddr);
+               // info!("Page Table is Overwritten, flush tlb.");
                 core::arch::asm!(
                     r"invtlb 0x00, $r0, $r0
                     dbar 0"

@@ -15,6 +15,8 @@ use syscall_utils::{SyscallError, SyscallResult};
 pub const SOCKET_TYPE_MASK: usize = 0xFF;
 
 pub fn syscall_socket(domain: usize, s_type: usize, _protocol: usize) -> SyscallResult {
+    info!("[syscall_socket()]");
+    info!("domain:{:x?} ,s_type:{:x?} ,_protocol:{:x?}",domain,s_type,_protocol);
     let Ok(domain) = Domain::try_from(domain) else {
         error!("[socket()] Address Family not supported: {domain}");
         // return ErrorNo::EAFNOSUPPORT as isize;
@@ -76,6 +78,8 @@ pub fn syscall_listen(fd: usize, _backlog: usize) -> SyscallResult {
         return Err(SyscallError::ENOTSOCK);
     };
 
+    info!("[listen()] listening, fd: {}, backlog: {}", fd, _backlog);
+
     Ok(socket.listen().map_or(-1, |_| 0))
 }
 
@@ -85,6 +89,8 @@ pub fn syscall_accept4(
     addr_len: *mut u32,
     flags: usize,
 ) -> SyscallResult {
+    info!("[syscall_accept4()]");
+
     let curr = current_process();
 
     let file = match curr.fd_manager.fd_table.lock().get(fd) {
@@ -96,7 +102,7 @@ pub fn syscall_accept4(
         return Err(SyscallError::ENOTSOCK);
     };
 
-    debug!("[accept()] socket {fd} accept");
+    info!("[accept()] socket {fd} accept");
 
     // socket.accept() might block, we need to release all lock now.
 
@@ -109,7 +115,7 @@ pub fn syscall_accept4(
                 return Err(SyscallError::ENFILE); // Maybe ENFILE
             };
 
-            debug!("[accept()] socket {fd} accept new socket {new_fd} {addr:?}");
+            info!("[accept()] socket {fd} accept new socket {new_fd} {addr:?}");
 
             // handle flags
             if flags & SOCK_NONBLOCK != 0 {
@@ -122,10 +128,10 @@ pub fn syscall_accept4(
             fd_table[new_fd] = Some(Arc::new(s));
             Ok(new_fd as isize)
         }
-        Err(AxError::Unsupported) => Err(SyscallError::EOPNOTSUPP),
-        Err(AxError::Interrupted) => Err(SyscallError::EINTR),
-        Err(AxError::WouldBlock) => Err(SyscallError::EAGAIN),
-        Err(_) => Err(SyscallError::EPERM),
+        Err(AxError::Unsupported) => {info!("EOPNOTSUPP");Err(SyscallError::EOPNOTSUPP)},
+        Err(AxError::Interrupted) => {info!("EINTR");Err(SyscallError::EINTR)},
+        Err(AxError::WouldBlock) => {info!("EAGAIN");Err(SyscallError::EAGAIN)},
+        Err(_) => {info!("EPERM");Err(SyscallError::EPERM)},
     }
 }
 
@@ -143,14 +149,14 @@ pub fn syscall_connect(fd: usize, addr_buf: *const u8, _addr_len: usize) -> Sysc
 
     let addr = unsafe { socket_address_from(addr_buf) };
 
-    debug!("[connect()] socket {fd} connecting to {addr:?}");
+    info!("[connect()] pid: {}, socket {fd} connecting to {addr:?}",curr.pid());
 
     match socket.connect(addr) {
-        Ok(_) => Ok(0),
-        Err(AxError::WouldBlock) => Err(SyscallError::EINPROGRESS),
-        Err(AxError::Interrupted) => Err(SyscallError::EINTR),
-        Err(AxError::AlreadyExists) => Err(SyscallError::EISCONN),
-        Err(_) => Err(SyscallError::EPERM),
+        Ok(_) => {info!("OK");Ok(0)},
+        Err(AxError::WouldBlock) => {info!("EINPROGRESS");Err(SyscallError::EINPROGRESS)},
+        Err(AxError::Interrupted) => {info!("EINTR");Err(SyscallError::EINTR)},
+        Err(AxError::AlreadyExists) => {info!("EISCONN");Err(SyscallError::EISCONN)},
+        Err(_) => {info!("EPERM");Err(SyscallError::EPERM)},
     }
 }
 
@@ -180,6 +186,8 @@ pub fn syscall_get_sock_name(fd: usize, addr: *mut u8, addr_len: *mut u32) -> Sy
 
 #[allow(unused)]
 pub fn syscall_getpeername(fd: usize, addr_buf: *mut u8, addr_len: *mut u32) -> SyscallResult {
+    info!("[getpeername()] socket {fd} addr_buf: {:?}", addr_buf);
+
     let curr = current_process();
 
     let file = match curr.fd_manager.fd_table.lock().get(fd) {

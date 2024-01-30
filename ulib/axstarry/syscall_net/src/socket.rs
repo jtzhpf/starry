@@ -26,8 +26,18 @@ pub const SOCKET_TYPE_MASK: usize = 0xFF;
 #[repr(usize)]
 #[allow(non_camel_case_types)]
 pub enum Domain {
-    AF_UNIX = 1,
-    AF_INET = 2,
+    AF_UNSPEC = 0,
+    AF_UNIX = 1,	    /* Unix domain sockets 		*/
+    AF_INET = 2,	    /* Internet IP Protocol 	*/
+    AF_AX25 = 3,	    /* Amateur Radio AX.25 		*/
+    AF_IPX = 4,	        /* Novell IPX 			*/
+    AF_APPLETALK = 5,	/* Appletalk DDP 		*/
+    AF_NETROM = 6,	    /* Amateur radio NetROM 	*/
+    AF_BRIDGE = 7,	    /* Multiprotocol bridge 	*/
+    AF_AAL5 = 8,	    /* Reserved for Werner's ATM 	*/
+    AF_X25 = 9,	        /* Reserved for X.25 project 	*/
+    // AF_INET6 = 10,	    /* IP version 6			*/
+    AF_MAX = 12,	    /* For now.. */
 }
 
 #[derive(TryFromPrimitive, PartialEq, Eq, Clone, Debug)]
@@ -535,6 +545,10 @@ impl Socket {
             SocketInner::Udp(_) => Err(AxError::Unsupported)?,
         };
         let addr = new_socket.peer_addr()?;
+        axlog::info!("[accept()] ready to yield");
+        //axprocess::yield_now_task();
+        axlog::info!("[accept()] return from yield");
+
 
         Ok((
             Self {
@@ -554,6 +568,7 @@ impl Socket {
     }
 
     pub fn connect(&self, addr: SocketAddr) -> AxResult {
+        axlog::info!("[connect()] addr:{:#x?}",addr);
         let inner = self.inner.lock();
         match &*inner {
             SocketInner::Tcp(s) => s.connect(into_core_sockaddr(addr)),
@@ -715,6 +730,7 @@ pub unsafe fn socket_address_from(addr: *const u8) -> SocketAddr {
             let addr = IpAddr::v4(a[0], a[1], a[2], a[3]);
             SocketAddr { addr, port }
         }
+        _ => todo!()
     }
 }
 /// Only support INET (ipv4)

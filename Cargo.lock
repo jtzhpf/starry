@@ -1978,6 +1978,7 @@ dependencies = [
  "axtask",
  "bitflags 2.4.0",
  "numeric-enum-macro",
+ "syscall_net",
  "syscall_utils",
 ]
 

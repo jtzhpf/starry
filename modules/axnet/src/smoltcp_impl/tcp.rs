@@ -122,6 +122,7 @@ impl TcpSocket {
     ///
     /// The local port is generated automatically.
     pub fn connect(&self, remote_addr: SocketAddr) -> AxResult {
+        info!("[tcp::connect()]");
         self.update_state(STATE_CLOSED, STATE_CONNECTING, || {
             // SAFETY: no other threads can read or write these fields.
             let handle = unsafe { self.handle.get().read() }
@@ -141,12 +142,13 @@ impl TcpSocket {
                         .connect(iface.lock().context(), remote_endpoint, bound_endpoint)
                         .or_else(|e| match e {
                             ConnectError::InvalidState => {
-                                ax_err!(BadState, "socket connect() failed")
+                                ax_err!(BadState, "[tcp::connect()] socket connect() failed")
                             }
                             ConnectError::Unaddressable => {
-                                ax_err!(ConnectionRefused, "socket connect() failed")
+                                ax_err!(ConnectionRefused, "[tcp::connect()] socket connect() failed")
                             }
                         })?;
+                    info!("[tcp::connect()] connect seems fine?");
                     Ok((
                         socket.local_endpoint().unwrap(),
                         socket.remote_endpoint().unwrap(),
@@ -155,16 +157,19 @@ impl TcpSocket {
             unsafe {
                 // SAFETY: no other threads can read or write these fields as we
                 // have changed the state to `BUSY`.
+                info!("[tcp::connect()] local_endpoint:{local_endpoint}, remote_endpoint: {remote_endpoint}");
                 self.local_addr.get().write(local_endpoint);
                 self.peer_addr.get().write(remote_endpoint);
                 self.handle.get().write(Some(handle));
             }
             Ok(())
         })
-        .unwrap_or_else(|_| ax_err!(AlreadyExists, "socket connect() failed: already connected"))?; // EISCONN
+        .unwrap_or_else(|_| ax_err!(AlreadyExists, "[tcp::connect()] socket connect() failed: already connected"))?; // EISCONN
 
         // HACK: yield() to let server to listen
+        info!("[tcp::connect()] ready to yield");
         yield_now();
+        info!("[tcp::connect()] return from yield");
 
         // Here our state must be `CONNECTING`, and only one thread can run here.
         if self.is_nonblocking() {
@@ -177,7 +182,7 @@ impl TcpSocket {
                 } else if self.get_state() == STATE_CONNECTED {
                     Ok(())
                 } else {
-                    ax_err!(ConnectionRefused, "socket connect() failed")
+                    ax_err!(ConnectionRefused, "[tcp::connect()] socket connect() failed")
                 }
             })
         }
@@ -220,7 +225,7 @@ impl TcpSocket {
                 (*self.local_addr.get()).port = bound_endpoint.port;
             }
             LISTEN_TABLE.listen(bound_endpoint)?;
-            debug!("TCP socket listening on {}", bound_endpoint);
+            info!("TCP socket listening on {}", bound_endpoint);
             Ok(())
         })
         .unwrap_or(Ok(())) // ignore simultaneous `listen`s.
@@ -241,7 +246,7 @@ impl TcpSocket {
         let local_port = unsafe { self.local_addr.get().read().port };
         self.block_on(|| {
             let (handle, (local_addr, peer_addr)) = LISTEN_TABLE.accept(local_port)?;
-            debug!("TCP socket accepted a new connection {}", peer_addr);
+            info!("[tcp::accept()] TCP socket accepted a new connection {}", peer_addr);
             Ok(TcpSocket::new_connected(handle, local_addr, peer_addr))
         })
     }
@@ -300,7 +305,7 @@ impl TcpSocket {
         if self.is_connecting() {
             return Err(AxError::WouldBlock);
         } else if !self.is_connected() {
-            return ax_err!(NotConnected, "socket recv() failed");
+            return ax_err!(NotConnected, "[tcp::recv()] socket recv() failed");
         }
 
         // SAFETY: `self.handle` should be initialized in a connected socket.
@@ -309,7 +314,7 @@ impl TcpSocket {
             SOCKET_SET.with_socket_mut::<tcp::Socket, _, _>(handle, |socket| {
                 if !socket.is_active() {
                     // not open
-                    ax_err!(ConnectionRefused, "socket recv() failed")
+                    ax_err!(ConnectionRefused, "[tcp::recv()] socket recv() failed")
                 } else if !socket.may_recv() {
                     // connection closed
                     Ok(0)
@@ -318,7 +323,7 @@ impl TcpSocket {
                     // TODO: use socket.recv(|buf| {...})
                     let len = socket
                         .recv_slice(buf)
-                        .map_err(|_| ax_err_type!(BadState, "socket recv() failed"))?;
+                        .map_err(|_| ax_err_type!(BadState, "[tcp::recv()] socket recv() failed"))?;
                     Ok(len)
                 } else {
                     // no more data
@@ -334,7 +339,7 @@ impl TcpSocket {
         if self.is_connecting() {
             return Err(AxError::WouldBlock);
         } else if !self.is_connected() {
-            return ax_err!(NotConnected, "socket recv() failed");
+            return ax_err!(NotConnected, "[tcp::recv()] socket recv() failed");
         }
 
         let expire_at = current_ticks() + ticks;
@@ -345,7 +350,7 @@ impl TcpSocket {
             SOCKET_SET.with_socket_mut::<tcp::Socket, _, _>(handle, |socket| {
                 if !socket.is_active() {
                     // not open
-                    ax_err!(ConnectionRefused, "socket recv() failed")
+                    ax_err!(ConnectionRefused, "[tcp::recv_timeout()] socket recv() failed")
                 } else if !socket.may_recv() {
                     // connection closed
                     Ok(0)
@@ -354,7 +359,7 @@ impl TcpSocket {
                     // TODO: use socket.recv(|buf| {...})
                     let len = socket
                         .recv_slice(buf)
-                        .map_err(|_| ax_err_type!(BadState, "socket recv() failed"))?;
+                        .map_err(|_| ax_err_type!(BadState, "[tcp::recv_timeout()] socket recv() failed"))?;
                     Ok(len)
                 } else {
                     // no more data

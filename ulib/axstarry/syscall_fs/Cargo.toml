@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-
+default = ["net"]
 signal = ["axprocess/signal"]
-
+net = []
 [dependencies]
 axtask = { path = "../../../modules/axtask" }
 axsync = { path = "../../../modules/axsync" }
@@ -17,6 +17,7 @@ axerrno = { path = "../../../crates/axerrno" }
 axlog = { path = "../../../modules/axlog" }
 axprocess = { path = "../../../modules/axprocess" }
 syscall_utils = { path = "../syscall_utils" }
+syscall_net = { path = "../syscall_net" }
 axio = { path = "../../../crates/axio" }
 axhal = { path = "../../../modules/axhal" }
 bitflags = "2.0"

@@ -10,7 +10,7 @@ use axlog::{debug, info};
 use axprocess::current_process;
 use axprocess::link::{create_link, deal_with_path, real_path};
 use syscall_utils::{IoVec, SyscallError, SyscallResult};
-
+use syscall_net::Socket;
 use crate::ctype::pipe::make_pipe;
 use crate::ctype::{dir::new_dir, file::new_fd};
 /// 功能：从一个文件描述符中读取；
@@ -20,14 +20,13 @@ use crate::ctype::{dir::new_dir, file::new_fd};
 ///     - count：要读取的字节数。
 /// 返回值：成功执行，返回读取的字节数。如为0，表示文件结束。错误，则返回-1。
 pub fn syscall_read(fd: usize, buf: *mut u8, count: usize) -> SyscallResult {
-    info!("[read()] fd: {fd}, buf: {buf:?}, len: {count}",);
 
     if buf.is_null() {
         return Err(SyscallError::EFAULT);
     }
 
     let process = current_process();
-
+    info!("[read()] pid: {}, fd: {fd}, buf: {buf:?}, len: {count}",process.pid());
     // TODO: 左闭右开
     let buf = match process.manual_alloc_range_for_lazy(
         (buf as usize).into(),
@@ -192,6 +191,8 @@ pub fn syscall_writev(fd: usize, iov: *const IoVec, iov_cnt: usize) -> SyscallRe
 ///
 /// 注意：fd[2]是32位数组，所以这里的 fd 是 u32 类型的指针，而不是 usize 类型的指针。
 pub fn syscall_pipe2(fd: *mut u32, flags: usize) -> SyscallResult {
+    info!("[syscall_pipe2()]");
+
     axlog::info!("Into syscall_pipe2. fd: {} flags: {}", fd as usize, flags);
     let process = current_process();
     if process.manual_alloc_for_lazy((fd as usize).into()).is_err() {
@@ -225,6 +226,8 @@ pub fn syscall_pipe2(fd: *mut u32, flags: usize) -> SyscallResult {
 ///     - fd：被复制的文件描述符。
 /// 返回值：成功执行，返回新的文件描述符。失败，返回-1。
 pub fn syscall_dup(fd: usize) -> SyscallResult {
+    info!("[syscall_dup()]");
+
     let process = current_process();
     let mut fd_table = process.fd_manager.fd_table.lock();
     if fd >= fd_table.len() {
@@ -306,6 +309,7 @@ pub fn syscall_openat(fd: usize, path: *const u8, flags: usize, _mode: u8) -> Sy
     } else {
         return Err(SyscallError::EMFILE);
     };
+    info!("[syscall_openat({fd_num},{:#x?},{flags},{_mode})]",path);
     debug!("allocated fd_num: {}", fd_num);
     // 如果是DIR
     if path.is_dir() {

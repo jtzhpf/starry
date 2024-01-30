@@ -172,11 +172,11 @@ impl UtsName {
     /// 默认的 UtsName，并没有统一标准
     pub fn default() -> Self {
         Self {
-            sysname: Self::from_str("YoimiyaOS"),
-            nodename: Self::from_str("YoimiyaOS - machine[0]"),
+            sysname: Self::from_str("StarryOS"),
+            nodename: Self::from_str("StarryOS - machine[0]"),
             release: Self::from_str("114"),
             version: Self::from_str("1.0"),
-            machine: Self::from_str("RISC-V 64 on SIFIVE FU740"),
+            machine: Self::from_str("LoongArch64 on 2k1000"),
             domainname: Self::from_str("https://github.com/Azure-stars/arceos"),
         }
     }

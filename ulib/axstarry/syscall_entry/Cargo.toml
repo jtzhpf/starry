@@ -43,6 +43,9 @@ display = ["arceos_api/display", "axfeat/display"]
 # Fs
 fs = ["axruntime/fs", "arceos_api/fs"]
 
+# PCI
+bus-pci = ["axfeat/bus-pci"]
+
 # Signal
 signal = ["syscall_task/signal", "syscall_fs/signal", "dep:axsignal"]
 

@@ -49,7 +49,7 @@ STRUCT := Monolithic
 
 # QEMU options
 BLK ?= n
-NET ?= n
+NET ?= y
 GRAPHIC ?= n
 BUS ?= mmio
 
@@ -127,6 +127,7 @@ else ifeq ($(ARCH), loongarch64)
   LOG := warn
   ACCEL ?= n
   SMP := 1
+  BUS := pci
   TARGET := loongarch64-unknown-none
   PLATFORM_NAME ?= loongarch64-qemu-virt
 #   PLATFORM_NAME := loongarch64-2k1000
@@ -251,5 +252,12 @@ clean: clean_c
 clean_c::
 	rm -rf ulib/axlibc/build_*
 	rm -rf $(app-objs)
+
+
+# ./build_img.sh sdcard;make;/media/psf/SSD/OS/arceos-env/qemu-for-loongarch-arceos/qemu/build/qemu-system-loongarch64 -m 4G -smp 1 -machine virt -kernel apps/oscomp/oscomp_loongarch64-qemu-virt.elf -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp::5555-:5555,hostfwd=udp::5555-:5555 -nographic -vga none -bios /media/psf/SSD/arceos/tools/loongarch64/loongarch_bios_0310.bin
+
+# ./build_img.sh sdcard;make LOG=info;/media/psf/SSD/OS/arceos-env/qemu-for-loongarch-arceos/qemu/build/qemu-system-loongarch64 -m 4G -smp 1 -machine virt -kernel apps/oscomp/oscomp_loongarch64-qemu-virt.elf -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp::5555-:5555,hostfwd=udp::5555-:5555 -nographic -vga none -bios /media/psf/SSD/arceos/tools/loongarch64/loongarch_bios_0310.bin
+
+# ./build_img.sh sdcard;make LOG=debug;/media/psf/SSD/OS/arceos-env/qemu-for-loongarch-arceos/qemu/build/qemu-system-loongarch64 -m 4G -smp 1 -machine virt -kernel apps/oscomp/oscomp_loongarch64-qemu-virt.elf -device virtio-net-pci,netdev=net0 -netdev user,id=net0,hostfwd=tcp::5555-:5555,hostfwd=udp::5555-:5555 -nographic -vga none -bios /media/psf/SSD/arceos/tools/loongarch64/loongarch_bios_0310.bin
 
 .PHONY: all build disasm run justrun debug clippy fmt fmt_c test test_no_fail_fast clean clean_c doc disk_image make_bin

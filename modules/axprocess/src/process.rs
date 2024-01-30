@@ -588,6 +588,7 @@ impl Process {
     pub fn alloc_fd(&self, fd_table: &mut Vec<Option<Arc<dyn FileIO>>>) -> AxResult<usize> {
         for (i, fd) in fd_table.iter().enumerate() {
             if fd.is_none() {
+                info!("[alloc_fd()] pid: {}, fd {} exist but none",self.pid(),i);
                 return Ok(i);
             }
         }
@@ -596,6 +597,7 @@ impl Process {
             return Err(AxError::StorageFull);
         }
         fd_table.push(None);
+        info!("[alloc_fd()] pid {} get file fd: {}",self.pid(),fd_table.len() - 1);
         Ok(fd_table.len() - 1)
     }
     pub fn get_cwd(&self) -> String {
